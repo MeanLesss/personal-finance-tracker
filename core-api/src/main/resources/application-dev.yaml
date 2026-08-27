@@ -1,0 +1,31 @@
+spring:
+  profiles:
+    active: dev
+  application:
+    name: personal-finance-tracker
+
+  datasource:
+    url: "jdbc:postgresql://localhost:5433/personal_finance_db"
+    hikari:
+      driver-class-name: org.postgresql.Driver
+      username: postgres
+      password: 123456
+      pool-name: SpringBootHikariCP # HikariCP
+      maximum-pool-size: 100
+      minimum-idle: 5
+      max-lifetime: 300000
+      connection-timeout: 300000
+      initialization-fail-timeout: 0
+    dbcp2:
+      pool-prepared-statements: true
+    username: postgres
+    password: 123456
+  jpa:
+    hibernate:
+      ddl-auto: "update"
+    show-sql: true
+    properties:
+      hibernate:
+        format-sql: true
+server:
+  port: 9090
