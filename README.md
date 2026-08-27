@@ -53,7 +53,7 @@ personal-finance-tracker/
      datasource:
        url: "jdbc:postgresql://localhost:5432/personal_finance_db"
        username: postgres        # change to your user
-       password: meankiller      # change to your password
+       password:     # change to your password
    ```
 
    - `ddl-auto: update` creates/updates the tables automatically on startup, so no schema script is required.
