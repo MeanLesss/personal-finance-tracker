@@ -93,3 +93,71 @@ Or run `CoreApiApplication` directly from your IDE (VS Code launch config is alr
 | reporting-api | Reports | `/reports` (summary, category breakdown) |
 
 See the full API spec in Swagger UI, and the BRD in `../Personal_Finance_Tracker_BRD_v3.md`.
+
+---
+
+## Usage Flow (Mermaid)
+
+The API is used in a fixed order because later resources depend on earlier ones. Each new resource needs the `id` returned in the previous step's response. Flows are split into small parts below.
+
+### Part 1 — Setup: User, Account, Category
+
+Create the three "owning" resources first. Each of these only needs the `id` of the one before it.
+
+```mermaid
+flowchart TD
+    A[POST /auth/register<br/><i>name, email, password</i>] -->|user.id| B[POST /accounts<br/><i>userId, accountName, accountType, balance</i>]
+    B -.->|<i>userId reused</i>| C[POST /categories<br/><i>userId, name, type INCOME/EXPENSE</i>]
+    A -->|userId| C
+```
+
+### Part 2 — Transactions (money movement)
+
+Transactions link an **account** and a **category** (both from Part 1). Creating/editing/deleting a transaction automatically adjusts the account balance (INCOME adds, EXPENSE subtracts).
+
+```mermaid
+flowchart LR
+    subgraph Part1["From Part 1"]
+        A["Account (id)"]
+        C["Category (id)"]
+    end
+    D["POST /transactions<br/><i>accountId, categoryId, amount, type, date</i>"]
+    E["Account balance updated"]
+    A --> D
+    C --> D
+    D --> E
+```
+
+### Part 3 — Budget & Status
+
+A budget targets a category for a given month/year. Spend-vs-limit status can be checked against it.
+
+```mermaid
+flowchart LR
+    C["Category (id)"] --> B["POST /budgets<br/><i>userId, categoryId, monthlyLimit, month, year</i>"]
+    B --> S["GET /budgets/status<br/><i>spend vs limit</i>"]
+```
+
+### Part 4 — Reports (read-only)
+
+Reports aggregate the transactions created in Part 2.
+
+```mermaid
+flowchart LR
+    T["Transactions (Part 2)"] --> S["GET /reports/summary<br/><i>monthly income vs expense</i>"]
+    T --> CB["GET /reports/category-breakdown<br/><i>spending by category</i>"]
+    A["Accounts (Part 1)"] --> NW["GET /accounts/net-worth<br/><i>sum of balances</i>"]
+```
+
+### Full Flow (combined)
+
+```mermaid
+flowchart TD
+    U["POST /auth/register"] --> A["POST /accounts"]
+    U --> Cat["POST /categories"]
+    A --> T["POST /transactions"]
+    Cat --> T
+    Cat --> B["POST /budgets"]
+    T --> R["GET /reports/summary / category-breakdown"]
+    A --> N["GET /accounts/net-worth"]
+```
