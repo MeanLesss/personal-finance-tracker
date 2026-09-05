@@ -1,5 +1,6 @@
 package com.example.reportingapi.controller.budget;
 
+import com.example.common.mappers.responses.BudgetStatusView;
 import com.example.common.mappers.responses.BudgetView;
 import com.example.common.payload.request.BudgetRequest;
 import com.example.common.util.Pagination;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -48,6 +50,14 @@ public class BudgetController {
     public RestApiResponse<Void> delete(@PathVariable Long id) {
         budgetService.delete(id);
         return new RestApiResponse<>("200", "Success", null);
+    }
+
+    @GetMapping("/status")
+    public RestApiResponse<List<BudgetStatusView>> getBudgetStatus(
+            @RequestParam Long userId,
+            @RequestParam Integer month,
+            @RequestParam Integer year) {
+        return new RestApiResponse<>("200", "Success", budgetService.getBudgetStatus(userId, month, year));
     }
 
 }

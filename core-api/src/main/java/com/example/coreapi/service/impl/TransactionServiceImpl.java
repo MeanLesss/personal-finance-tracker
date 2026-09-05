@@ -3,6 +3,7 @@ package com.example.coreapi.service.impl;
 import com.example.common.entity.Account;
 import com.example.common.entity.Category;
 import com.example.common.entity.Transaction;
+import com.example.common.entity.enums.TransactionType;
 import com.example.common.exception.ResourceNotFoundException;
 import com.example.common.mappers.TransactionMapper;
 import com.example.common.mappers.responses.TransactionView;
@@ -14,10 +15,12 @@ import com.example.coreapi.service.TransactionService;
 import com.example.reportingapi.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -48,7 +51,30 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public List<TransactionView> findAll(Pagination pagination) {
-        Page<Transaction> page = transactionRepository.findAll(pagination.getJPAPageRequest());
+        return findAll(null, null, null, null, null, pagination);
+    }
+
+    @Override
+    public List<TransactionView> findAll(Long accountId, Long categoryId, LocalDate startDate, LocalDate endDate, TransactionType type, Pagination pagination) {
+        Specification<Transaction> spec = (root, query, cb) -> cb.conjunction();
+
+        if (accountId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("account").get("id"), accountId));
+        }
+        if (categoryId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("category").get("id"), categoryId));
+        }
+        if (startDate != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("date"), startDate));
+        }
+        if (endDate != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("date"), endDate));
+        }
+        if (type != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), type));
+        }
+
+        Page<Transaction> page = transactionRepository.findAll(spec, pagination.getJPAPageRequest());
         pagination.setTotalCounts(page.getTotalElements());
         return page.getContent().stream()
                 .map(transactionMapper::mapFromForList)

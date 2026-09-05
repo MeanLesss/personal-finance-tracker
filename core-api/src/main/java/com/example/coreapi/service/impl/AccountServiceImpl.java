@@ -1,14 +1,21 @@
 package com.example.coreapi.service.impl;
 
 import com.example.common.entity.Account;
+import com.example.common.entity.Transaction;
 import com.example.common.entity.User;
 import com.example.common.exception.ResourceNotFoundException;
 import com.example.common.mappers.AccountMapper;
+import com.example.common.mappers.TransactionMapper;
+import com.example.common.mappers.responses.AccountBalanceView;
 import com.example.common.mappers.responses.AccountView;
+import com.example.common.mappers.responses.NetWorthView;
+import com.example.common.mappers.responses.TransactionView;
 import com.example.common.payload.request.AccountRequest;
+import com.example.common.payload.request.TransferRequest;
 import com.example.common.repository.UserRepository;
 import com.example.common.util.Pagination;
 import com.example.coreapi.repository.AccountRepository;
+import com.example.coreapi.repository.TransactionRepository;
 import com.example.coreapi.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +32,8 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
+    private final TransactionMapper transactionMapper;
 
     @Override
     @Transactional
@@ -81,6 +90,63 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
         accountRepository.delete(account);
+    }
+
+    @Override
+    public AccountBalanceView getBalance(Long id) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+        return new AccountBalanceView(account.getId(), account.getAccountName(), account.getBalance(), account.getCurrency());
+    }
+
+    @Override
+    public NetWorthView getNetWorth(Long userId) {
+        findUser(userId);
+        List<Account> accounts = accountRepository.findByUserId(userId);
+        BigDecimal total = accounts.stream()
+                .map(Account::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new NetWorthView(userId, total, "USD", accounts.size());
+    }
+
+    @Override
+    @Transactional
+    public void transfer(TransferRequest request) {
+        if (request.getFromAccountId() == null || request.getToAccountId() == null) {
+            throw new IllegalArgumentException("Source and destination account IDs are required");
+        }
+        if (request.getFromAccountId().equals(request.getToAccountId())) {
+            throw new IllegalArgumentException("Source and destination accounts cannot be the same");
+        }
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Transfer amount must be strictly greater than zero");
+        }
+
+        Account fromAccount = accountRepository.findById(request.getFromAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Source account not found with id: " + request.getFromAccountId()));
+
+        Account toAccount = accountRepository.findById(request.getToAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destination account not found with id: " + request.getToAccountId()));
+
+        if (fromAccount.getBalance().compareTo(request.getAmount()) < 0) {
+            throw new IllegalArgumentException("Insufficient balance in source account: " + fromAccount.getBalance());
+        }
+
+        fromAccount.setBalance(fromAccount.getBalance().subtract(request.getAmount()));
+        toAccount.setBalance(toAccount.getBalance().add(request.getAmount()));
+
+        accountRepository.save(fromAccount);
+        accountRepository.save(toAccount);
+    }
+
+    @Override
+    public List<TransactionView> getAccountTransactions(Long accountId) {
+        accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+        List<Transaction> transactions = transactionRepository.findByAccountIdOrderByDateDesc(accountId);
+        return transactions.stream()
+                .map(transactionMapper::mapFromForList)
+                .toList();
     }
 
     private User findUser(Long userId) {
