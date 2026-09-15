@@ -90,7 +90,7 @@ Or run `CoreApiApplication` directly from your IDE (VS Code launch config is alr
 | core-api | Transactions | `/transactions` (CRUD, filters, history) |
 | reporting-api | Categories | `/categories` (CRUD) |
 | reporting-api | Budgets | `/budgets` (CRUD, status) |
-| reporting-api | Reports | `/reports` (summary, category breakdown) |
+| reporting-api | Reports | `/reports` (monthly summary, yearly review, category breakdown) |
 
 See the full API spec in Swagger UI, and the BRD in `../Personal_Finance_Tracker_BRD_v3.md`.
 
@@ -138,14 +138,15 @@ flowchart LR
     B --> S["GET /budgets/status<br/><i>spend vs limit</i>"]
 ```
 
-### Part 4 — Reports (read-only)
+### Part 4 — Reports & Analytics
 
-Reports aggregate the transactions created in Part 2.
+Reports aggregate transactions into clean, meaningful financial insights:
 
 ```mermaid
 flowchart LR
-    T["Transactions (Part 2)"] --> S["GET /reports/summary<br/><i>monthly income vs expense</i>"]
-    T --> CB["GET /reports/category-breakdown<br/><i>spending by category</i>"]
+    T["Transactions (Part 2)"] --> S["GET /reports/summary<br/><i>Monthly cash flow: income, expense, savings rate</i>"]
+    T --> YR["GET /reports/yearly<br/><i>Annual review: 12-month Jan-Dec trend & peak months</i>"]
+    T --> CB["GET /reports/category-breakdown<br/><i>Spending % and counts by category</i>"]
     A["Accounts (Part 1)"] --> NW["GET /accounts/net-worth<br/><i>sum of balances</i>"]
 ```
 
@@ -158,6 +159,6 @@ flowchart TD
     A --> T["POST /transactions"]
     Cat --> T
     Cat --> B["POST /budgets"]
-    T --> R["GET /reports/summary / category-breakdown"]
+    T --> R["GET /reports/summary & yearly & category-breakdown"]
     A --> N["GET /accounts/net-worth"]
 ```
